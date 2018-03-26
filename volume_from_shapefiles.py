@@ -22,4 +22,10 @@ for shapefile in shapefiles:
     print shapefile_seconds
 
 #choose the correct DEM 
-correct_dem = sorted(
+previous_dem = []
+correct_dem = []
+for i in range(dem_seconds):
+    previous_dem = all(int(dem_seconds) < int(shp_seconds))
+    correct_dem = max(previous_dem)
+    
+#find volume from shapefile and preceding DEM
