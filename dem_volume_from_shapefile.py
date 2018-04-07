@@ -60,6 +60,7 @@ for filename in files:
     print filename
     shapes = sf.shapes()
 # GeoTIFF
+# how do I use the previous_dem with the shapefiles to get volume
 ds = gdal.Open(previous_dem)
 for previous in previous_dem:   
 DEM = ds.ReadAsArray() #..... (from previous time)
