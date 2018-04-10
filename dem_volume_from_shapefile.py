@@ -61,9 +61,14 @@ for filename in files:
     shapes = sf.shapes()
 # GeoTIFF
 # how do I use the previous_dem with the shapefiles to get volume
-ds = gdal.Open(previous_dem)
+
 for previous in previous_dem:   
-DEM = ds.ReadAsArray() #..... (from previous time)
+    #print previous
+    previous = str(previous)
+    ds = gdal.Open(str(previous))
+    DEM = previous.ReadAsArray() #..... (from previous time)
+
+    
 outarray = np.zeros(DEM.shape)
 nY, nX = np.array(DEM.shape)
 Y = np.arange(0, nY, 1)[::-1]/1000.
@@ -84,3 +89,4 @@ for shape in shapes:
                 # Should be lowest cell in valley
                 outarray[Y == yi, X == xi] = DEM[Y == yi, X == xi] - np.nanmin(DEM[:, X == xi])
     volume = np.nansum(outarray)/1E6 # mm cells to m, check DEM height
+                
