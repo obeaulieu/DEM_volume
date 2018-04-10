@@ -36,8 +36,7 @@ previous_dem = []
 for i in range(len(landslide_seconds)):
     dems_before_landslide = dem_seconds < landslide_seconds[i]
     previous_dem_time = np.max(dem_seconds[dems_before_landslide])
-    previous_dem.append(previous_dem_time)
-
+    previous_dem.append('DEMs/DEM_fullextent_'+str(previous_dem_time).zfill(7)+'.tif')
 
 # Finding volume for shapefile from DEM
 def recursive_glob(rootdir='.', pattern='*'):
@@ -55,38 +54,45 @@ def recursive_glob(rootdir='.', pattern='*'):
 
 files = sorted(recursive_glob(pattern='*.shp'))
 
+time = []
 for filename in files:
     sf = shapefile.Reader(filename)
     print filename
     shapes = sf.shapes()
+    filename_time = filename.split('/')[-1].split('.')[0]
+    time.append(filename_time)
+    
 # GeoTIFF
 # how do I use the previous_dem with the shapefiles to get volume
-
+vol = []
 for previous in previous_dem:   
-    #print previous
-    previous = str(previous)
-    ds = gdal.Open(str(previous))
-    DEM = previous.ReadAsArray() #..... (from previous time)
+    print previous
+    ds = gdal.Open(previous)
+    DEM = ds.ReadAsArray() #..... (from previous time)
+    outarray = np.zeros(DEM.shape)  
+    nY, nX = np.array(DEM.shape)
+    Y = np.arange(0, nY, 1)[::-1]/1000.
+    X = np.arange(0, nX, 1)/1000.
+    for shape in shapes:
+        bbox = np.ceil(np.array(shape.bbox)*1E3)/1E3
+        poly = Polygon(shape.points)
+        x = np.round(np.arange(bbox[0], bbox[2], 0.001), 3)
+        y = np.round(np.arange(bbox[1], bbox[3], 0.001), 3)
+        #X, Y = np.meshgrid(x, y)
+        #for xi in range(len(x)):
+        #    for yi in range(len(y)):
+        for xi in x:
+            for yi in y:
+                if poly.contains(Point(xi, yi)):
+                    # Export the height above the minimum cell
+                    # in the y-direiction at that x-location
+                    # Should be lowest cell in valley
+                    outarray[Y == yi, X == xi] = DEM[Y == yi, X == xi] - np.nanmin(DEM[:, X == xi])
+        volume = np.nansum(outarray)/1E6 # mm cells to m, check DEM height
+        vol.append(volume)
 
-    
-outarray = np.zeros(DEM.shape)
-nY, nX = np.array(DEM.shape)
-Y = np.arange(0, nY, 1)[::-1]/1000.
-X = np.arange(0, nX, 1)/1000.
-for shape in shapes:
-    bbox = np.ceil(np.array(shape.bbox)*1E3)/1E3
-    poly = Polygon(shape.points)
-    x = np.round(np.arange(bbox[0], bbox[2], 0.001), 3)
-    y = np.round(np.arange(bbox[1], bbox[3], 0.001), 3)
-    #X, Y = np.meshgrid(x, y)
-    #for xi in range(len(x)):
-    #    for yi in range(len(y)):
-    for xi in x:
-        for yi in y:
-            if poly.contains(Point(xi, yi)):
-                # Export the height above the minimum cell
-                # in the y-direiction at that x-location
-                # Should be lowest cell in valley
-                outarray[Y == yi, X == xi] = DEM[Y == yi, X == xi] - np.nanmin(DEM[:, X == xi])
-    volume = np.nansum(outarray)/1E6 # mm cells to m, check DEM height
+plt.figure()   
+plt.plot(vol, 'ko')
+plt.title('Landslide Volume')
+plt.xlabel('Volume')
                 
